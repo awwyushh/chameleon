@@ -1,0 +1,9 @@
+- id: sql_basic_1
+  label: "sqli"
+  confidence: 0.92
+  pattern: "(?i)\\b(select|union|insert|update|delete|drop)\\b"
+
+- id: sql_comment
+  label: "sqli"
+  confidence: 0.9
+  pattern: "(?i)(--|/\\*|;\\s*--)"

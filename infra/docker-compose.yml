@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------
+  # 1. Data Layer
+  # -------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    networks: [chameleon-net]
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports: ["8000:8000"]
+    volumes: [chroma_data:/chroma/chroma]
+    networks: [chameleon-net]
+
+  # -------------------------------------------------------
+  # 2. Intelligence Layer (ML + Agentic)
+  # -------------------------------------------------------
+  ml-service:
+    build: ../ml
+    ports: ["5001:5001"]
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      # ❌ Removed Ollama references, ML should talk to Gemini via API calls
+      - GEMINI_MODEL=models/gemini-2.5-pro
+      - GEMINI_API_KEY=REPLACE_WITH_YOUR_GEMINI_KEY
+    networks: [chameleon-net]
+
+  agentic-ai:
+    build: ../agentic
+    ports: ["8001:8000"]
+    environment:
+      - REDIS_HOST=redis
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - GEMINI_MODEL=models/gemini-2.0-flash
+      - GEMINI_API_KEY=AIzaSyAE6F8WXuFQe6AzVvzq1_AWXTudnqK3uL8
+      # Agentic AI needs Docker socket for honeypot spawning
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on: [redis, chroma]
+    networks: [chameleon-net]
+
+  # -------------------------------------------------------
+  # 3. Control Plane (Agentd)
+  # -------------------------------------------------------
+  agentd:
+    build:
+      context: ../agentd
+    ports: ["9090:9090"]
+    environment:
+      - CHM_POLICY_PATH=policy.yaml
+      - REDIS_HOST=redis
+      - CHROMA_HOST=chroma
+    volumes:
+      - shared-socket:/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+      - ml-service
+      - aggregator
+    networks: [chameleon-net]
+
+  # -------------------------------------------------------
+  # 4. Application Layer (Victim App)
+  # -------------------------------------------------------
+  demo-app:
+    build: ../demo-app
+    ports: ["3000:3000"]
+    environment:
+      - CHAMELEON_SOCKET=/shared/chameleon.sock
+    volumes:
+      - shared-socket:/shared
+    depends_on: [agentd]
+    networks: [chameleon-net]
+
+  # -------------------------------------------------------
+  # 5. Visualization Layer
+  # -------------------------------------------------------
+  aggregator:
+    build: ../dashboard/aggregator
+    ports: ["4000:4000"]
+    depends_on: [redis, chroma]
+    networks: [chameleon-net]
+
+  honeypot-builder:
+    build: ../honeypot-templates/mysql-admin
+    image: chm-mysql-admin:latest
+    command: ["echo", "Honeypot Image Registered"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  agent-tester:
+    build: ../dashboard/agent-tester
+    container_name: chm-agent-tester
+    ports: ["8501:8501"]
+    environment:
+      # 🔥 Must point to updated agentic-ai service
+      - AGENT_URL=http://agentic-ai:8000/analyze
+    depends_on:
+      - agentic-ai
+    networks:
+      - chameleon-net
+
+volumes:
+  chroma_data:
+  shared-socket:
+
+networks:
+  chameleon-net:
+    driver: bridge

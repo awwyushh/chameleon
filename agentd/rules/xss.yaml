@@ -1,0 +1,9 @@
+- id: xss_script_tag
+  label: "xss"
+  confidence: 0.88
+  pattern: "(?i)<script.*?>.*?</script>"
+
+- id: xss_on_event
+  label: "xss"
+  confidence: 0.85
+  pattern: "(?i)onerror|onload|onmouseover"

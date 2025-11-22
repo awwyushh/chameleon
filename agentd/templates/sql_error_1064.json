@@ -1,0 +1,11 @@
+{
+  "id": "sql_error_1064",
+  "type": "sqli_error",
+  "status": 500,
+  "headers": {
+    "Server": "MySQL/5.7.28",
+    "Content-Type": "text/plain"
+  },
+  "body": "Error 1064: You have an error in your SQL syntax near '{{payload_excerpt}}' at line 1",
+  "signature": "23d9643d23fe22bf5696d63f4418890ddf1a5b29f9af1fa1eb552853db4eb1e6"
+}

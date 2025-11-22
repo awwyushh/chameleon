@@ -1,0 +1,61 @@
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  # ChromaDB for Vector Storage
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./chroma_data:/chroma/chroma
+
+  # Upgraded AI Service
+  ml-service:
+    build: ../ml
+    ports:
+      - "5001:5001"
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      # Point to host machine's Ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - chroma
+
+  aggregator:
+    build: ../dashboard/aggregator
+    ports:
+      - "4000:4000"
+    environment:
+      - AI_SERVICE_URL=http://ml-service:5001
+    depends_on:
+      - ml-service
+   
+  agentic-ai:
+    build: ../agentic
+    ports:
+        - "8001:8000" # Expose on 8001
+    environment:
+        - REDIS_HOST=redis
+        - CHROMA_HOST=chroma
+        - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+        - /var/run/docker.sock:/var/run/docker.sock # Crucial for spawning honeypots
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
+
+  agent-tester:
+    build: ../dashboard/agent-tester
+    container_name: chm-agent-tester
+    ports:
+      - "8501:8501"
+    environment:
+      # Point to the internal docker service name of the agentic AI
+      - AGENT_URL=http://agentic-ai:8000/analyze 
+    depends_on:
+      - agentic-ai

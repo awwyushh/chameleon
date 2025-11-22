@@ -1,0 +1,4 @@
+- id: bf_keywords
+  label: "bruteforce"
+  confidence: 0.70
+  pattern: "(?i)(password|login|failed|attempt)"

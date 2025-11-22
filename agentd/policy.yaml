@@ -1,0 +1,31 @@
+# policy.yaml
+tarpit:
+  threshold: 8
+  base_delay_ms: 400
+  growth_factor: 1.4
+  max_delay_ms: 8000
+  window_seconds: 10
+
+honeypot:
+  ttl_minutes: 30
+  spawn_on_confidence: 0.20
+  image: "chm-mysql-admin:latest"
+
+ml:
+  url: "http://localhost:5001/predict"
+  timeout_seconds: 3
+  confidence_threshold: 0.6
+
+aggregator:
+  url: "http://localhost:4000/v1/events"
+  jwt_secret: "demo-secret"
+
+templates:
+  path: "./templates"
+  hmac_secret: "demo-template-hmac"
+
+admin:
+  kill_switch: false
+
+metrics:
+  port: 9090
